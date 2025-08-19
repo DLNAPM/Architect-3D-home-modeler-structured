@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Architect 3D Home Modeler – Powered by Google AI (Corrected)
-- This version uses the correct `vertexai` SDK for Google's Imagen 2 model.
+- This version uses the correct `vertexai.vision_models` SDK for Google's Imagen model.
 - All HTML, CSS, and JS are in their respective folders.
 """
 
@@ -27,7 +27,7 @@ import smtplib
 
 # --- MODIFIED --- Import the correct Google Cloud libraries
 import vertexai
-from vertexai.preview.generative_models import ImageGenerationModel
+from vertexai.vision_models import ImageModel
 
 # ---------- Config ----------
 APP_NAME = "Architect 3D Home Modeler"
@@ -312,29 +312,27 @@ def save_image_bytes(png_bytes: bytes) -> str:
     with open(filepath, "wb") as f: f.write(png_bytes)
     return f"renderings/{filepath.name}"
 
-# --- CORRECTED --- This function now uses the correct Vertex AI SDK methods
 def generate_image_via_google_ai(prompt: str) -> str:
     """
-    Generates an image using Google Cloud's Imagen 2 model via Vertex AI.
+    Generates an image using Google Cloud's Imagen model via the Vertex AI SDK.
     """
     if not GCP_PROJECT_ID:
         raise RuntimeError("GCP_PROJECT_ID environment variable not set.")
 
     vertexai.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
     
-    model = ImageGenerationModel.from_pretrained("imagegeneration@006")
+    model = ImageModel.from_pretrained("imagegeneration@006")
     
-    response = model.generate_images(
+    images = model.generate_images(
         prompt=prompt,
         number_of_images=1,
         aspect_ratio="1:1"
     )
     
-    if not response.images:
+    if not images:
         raise RuntimeError("Google AI did not return any images.")
 
-    # Access the raw image bytes directly from the response object
-    image_bytes = response.images[0].image_bytes
+    image_bytes = images[0]._image_bytes
     return save_image_bytes(image_bytes)
 
 # ---------- Routes ----------
