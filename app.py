@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Architect 3D Home Modeler – Powered by Google AI
-- This version uses Google Cloud's Vertex AI (Imagen 2 model) for image generation.
+Architect 3D Home Modeler – Powered by Google AI (Corrected)
+- This version uses the correct `vertexai` SDK for Google's Imagen 2 model.
 - All HTML, CSS, and JS are in their respective folders.
 """
 
@@ -25,8 +25,9 @@ from PIL import Image, ImageDraw
 from email.message import EmailMessage
 import smtplib
 
-# --- MODIFIED --- Import Google Cloud libraries
-from google.cloud import aiplatform
+# --- MODIFIED --- Import the correct Google Cloud libraries
+import vertexai
+from vertexai.preview.generative_models import ImageGenerationModel
 
 # ---------- Config ----------
 APP_NAME = "Architect 3D Home Modeler"
@@ -37,10 +38,9 @@ RENDER_DIR = BASE_DIR / "static" / "renderings"
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
 
-# --- NEW --- Google Cloud Project Configuration
-# Make sure these are set as environment variables on your server (e.g., Render)
+# --- Google Cloud Project Configuration ---
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-GCP_LOCATION = os.getenv("GCP_LOCATION", "us-central1") # e.g., us-central1
+GCP_LOCATION = os.getenv("GCP_LOCATION", "us-central1")
 
 # Create Flask app
 app = Flask(__name__, template_folder=str(TEMPLATES_DIR), static_folder=str(STATIC_DIR))
@@ -52,14 +52,13 @@ app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or os.urandom(32)
 app.config.setdefault("DB_INITIALIZED", False)
 app.config.setdefault("FS_INITIALIZED", False)
 
-# Email envs (ensure you set these as environment variables)
+# Email envs
 MAIL_SERVER = os.getenv("MAIL_SERVER")
 MAIL_PORT = int(os.getenv("MAIL_PORT") or "587")
 MAIL_USERNAME = os.getenv("MAIL_USERNAME")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
 MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "1") in ("1", "true", "True")
 MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER") or f"no-reply@{APP_NAME.replace(' ', '').lower()}.local"
-
 
 # ---------- Helpers ----------
 
@@ -68,7 +67,6 @@ def init_fs_once():
     if not app.config["FS_INITIALIZED"]:
         for p in [UPLOAD_DIR, RENDER_DIR, STATIC_DIR, TEMPLATES_DIR]:
             p.mkdir(parents=True, exist_ok=True)
-        # Auto-generate a favicon if one doesn't exist
         ico = STATIC_DIR / "favicon.ico"
         if not ico.exists():
             img = Image.new("RGBA", (32, 32))
@@ -314,6 +312,7 @@ def save_image_bytes(png_bytes: bytes) -> str:
     with open(filepath, "wb") as f: f.write(png_bytes)
     return f"renderings/{filepath.name}"
 
+# --- CORRECTED --- This function now uses the correct Vertex AI SDK methods
 def generate_image_via_google_ai(prompt: str) -> str:
     """
     Generates an image using Google Cloud's Imagen 2 model via Vertex AI.
@@ -321,19 +320,21 @@ def generate_image_via_google_ai(prompt: str) -> str:
     if not GCP_PROJECT_ID:
         raise RuntimeError("GCP_PROJECT_ID environment variable not set.")
 
-    aiplatform.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
+    vertexai.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
     
-    model = aiplatform.ImageGenerationModel.from_pretrained("imagegeneration@006")
+    model = ImageGenerationModel.from_pretrained("imagegeneration@006")
     
     response = model.generate_images(
         prompt=prompt,
         number_of_images=1,
+        aspect_ratio="1:1"
     )
     
     if not response.images:
         raise RuntimeError("Google AI did not return any images.")
 
-    image_bytes = base64.b64decode(response.images[0]._image_base64)
+    # Access the raw image bytes directly from the response object
+    image_bytes = response.images[0].image_bytes
     return save_image_bytes(image_bytes)
 
 # ---------- Routes ----------
@@ -351,7 +352,6 @@ def generate():
         (UPLOAD_DIR / f"{uuid.uuid4().hex}_{plan_file.filename}").write_bytes(plan_file.read())
 
     session['available_rooms'] = build_room_list(description)
-
     user_id = session.get("user_id")
     new_rendering_ids = []
     
