@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Architect 3D Home Modeler – Powered by Google AI (Corrected)
-- This version uses the correct `vertexai.vision_models` SDK for Google's Imagen model.
-- All HTML, CSS, and JS are in their respective folders.
+Architect 3D Home Modeler – Powered by Google AI (Corrected SDK)
+- This version uses the correct and stable `vertexai.vision_models` SDK.
+- This resolves the previous ImportError issues.
 """
 
 import os
@@ -25,9 +25,9 @@ from PIL import Image, ImageDraw
 from email.message import EmailMessage
 import smtplib
 
-# --- MODIFIED --- Import the correct Google Cloud libraries
+# --- MODIFIED --- Import the correct, stable Google Cloud libraries
 import vertexai
-from vertexai.vision_models import ImageModel
+from vertexai.vision_models import ImageGenerationModel
 
 # ---------- Config ----------
 APP_NAME = "Architect 3D Home Modeler"
@@ -321,18 +321,19 @@ def generate_image_via_google_ai(prompt: str) -> str:
 
     vertexai.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
     
-    model = ImageModel.from_pretrained("imagegeneration@006")
+    model = ImageGenerationModel.from_pretrained("imagegeneration@006")
     
-    images = model.generate_images(
+    response = model.generate_images(
         prompt=prompt,
         number_of_images=1,
         aspect_ratio="1:1"
     )
     
-    if not images:
+    if not response.images:
         raise RuntimeError("Google AI did not return any images.")
 
-    image_bytes = images[0]._image_bytes
+    # Access the raw image bytes directly from the response object
+    image_bytes = response[0]._image_bytes
     return save_image_bytes(image_bytes)
 
 # ---------- Routes ----------
