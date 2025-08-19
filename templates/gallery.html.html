@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% from "macros.html" import render_card %}
+{% block content %}
+<h1>My Renderings</h1>
+{% if new_items %}
+<div class="card">
+  <h2>Newly Generated</h2>
+  <div class="grid">
+    {% for r in new_items %}{{ render_card(r, options, user) }}{% endfor %}
+  </div>
+</div>
+{% endif %}
+<div class="card bulk-actions">
+    <div class="row space">
+        <div>
+            <label><input type="checkbox" id="selectAll"> Select All</label>
+            <button id="likeBtn">❤️ Like</button>
+            <button id="favBtn">⭐ Favorite</button>
+            <button id="deleteBtn">🗑️ Delete</button>
+        </div>
+    </div>
+    {% if show_slideshow %}<a href="{{ url_for('slideshow') }}" class="button primary">▶️ View Favorites Slideshow</a>{% endif %}
+</div>
+<h3>All My Renderings</h3>
+<div id="renderingsGrid" class="grid">
+    {% for r in items %}{{ render_card(r, options, user) }}{% endfor %}
+</div>
+<div class="card">
+    <h2>Generate a New Room</h2>
+    <form id="generateRoomForm">
+        <select id="roomSelect" name="subcategory">
+            {% for room in rooms %}<option value="{{ room }}">{{ room }}</option>{% endfor %}
+        </select>
+        <div id="roomOptionsContainer"></div>
+        <button type="submit" class="primary">Generate Room</button>
+    </form>
+</div>
+<div id="imageModal" class="modal"><span class="close-modal">&times;</span><img class="modal-content" id="modalImg"></div>
+<script>
+    const ROOM_OPTIONS = {{ options | tojson }};
+</script>
+{% endblock %}

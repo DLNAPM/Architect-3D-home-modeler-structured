@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <div id="loadingOverlay">
+    <div class="loading-content">
+      <h2>Generating your renderings...</h2>
+      <p>Please hold, this may take a moment.</p>
+    </div>
+  </div>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}">{{ app_name }}</a>
+    <nav class="nav">
+      {% if user %}
+        <a href="{{ url_for('gallery') }}">My Gallery</a>
+      {% else %}
+        {% if session.get('guest_rendering_ids') %}
+        <a href="{{ url_for('session_gallery') }}" class="button-outline">
+          View Session <span class="badge">{{ session['guest_rendering_ids']|length }}</span>
+        </a>
+        {% endif %}
+      {% endif %}
+      
+      {% if user %}
+        <span class="user">Hi {{ user['name'] or user['email'] }}</span>
+        <a href="{{ url_for('logout') }}">Logout</a>
+      {% else %}
+        <a href="{{ url_for('login') }}">Login</a>
+        <a href="{{ url_for('register') }}">Register</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="container">
+    <div id="flash-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat,msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    </div>
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    const IS_LOGGED_IN = {{ 'true' if user else 'false' }};
+  </script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% from "macros.html" import render_card %}
+{% block content %}
+<h1>Your Current Session</h1>
+<div class="card info">
+  <p>These are the renderings you've created in this session. They are temporary.</p>
+  <p><strong><a href="{{ url_for('register') }}">Create an account</a> or <a href="{{ url_for('login') }}">log in</a> to save your work.</strong></p>
+</div>
+
+{% if items %}
+  {% if items|length >= 2 %}
+  <div class="card">
+    <a href="{{ url_for('session_slideshow') }}" class="button primary">▶️ Start Slideshow</a>
+  </div>
+  {% endif %}
+<div id="renderingsGrid" class="grid">
+    {% for r in items %}{{ render_card(r, options, user) }}{% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <p>You haven't generated any renderings yet. <a href="{{ url_for('index') }}">Start designing!</a></p>
+</div>
+{% endif %}
+<div class="card">
+    <h2>Generate a New Room</h2>
+    <form id="generateRoomForm">
+        <select id="roomSelect" name="subcategory">
+            {% for room in rooms %}<option value="{{ room }}">{{ room }}</option>{% endfor %}
+        </select>
+        <div id="roomOptionsContainer"></div>
+        <button type="submit" class="primary">Generate Room</button>
+    </form>
+</div>
+<div id="imageModal" class="modal"><span class="close-modal">&times;</span><img class="modal-content" id="modalImg"></div>
+<script>
+    const ROOM_OPTIONS = {{ options | tojson }};
+</script>
+{% endblock %}

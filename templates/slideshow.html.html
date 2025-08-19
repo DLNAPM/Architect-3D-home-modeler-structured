@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="slideshow-container">
+  <h1>Slideshow</h1>
+  <div class="slideshow">
+    {% for r in items %}
+      <div class="slide" {% if not loop.first %}style="display:none;"{% endif %}>
+        <img src="{{ url_for('static', filename=r['image_path']) }}" alt="{{ r['subcategory'] }}" class="render-img">
+        <div class="caption">{{ r['subcategory'] }}</div>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="row gap center">
+    <button id="prev" class="button">❮ Prev</button>
+    <a href="{{ url_for('gallery' if user else 'session_gallery') }}" class="button">Back to Gallery</a>
+    <button id="toggleDark" class="button">Toggle Dark 🌙</button>
+    <button id="next" class="button">Next ❯</button>
+  </div>
+</div>
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  let idx=0;
+  function show(i){slides.forEach((s,j)=>s.style.display=(i===j?'block':'none'));}
+  document.getElementById('prev').onclick=()=>{idx=(idx-1+slides.length)%slides.length;show(idx);}
+  document.getElementById('next').onclick=()=>{idx=(idx+1)%slides.length;show(idx);}
+  document.getElementById('toggleDark').onclick=()=>{
+      const currentImg = slides[idx].querySelector('.render-img');
+      if (currentImg) currentImg.classList.toggle('dark');
+  };
+</script>
+{% endblock %}
