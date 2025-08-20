@@ -11,7 +11,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .row { display: flex; align-items: center; }
 .gap > * { margin-right: 0.5rem; }
 .center { justify-content: center; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 1rem; }
 .landing-content { max-width: 1000px; margin: 2rem auto; text-align: center; }
 .landing-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; text-align: left; margin-top: 2rem; }
 .landing-column .card { height: 100%; box-sizing: border-box; }
@@ -21,7 +21,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .badge { background-color: var(--primary); color: var(--primary-text); font-size: 0.75em; padding: 2px 6px; border-radius: 8px; margin-left: 4px; }
 .info { background-color: #bee3f8; color: #2c5282; padding: 1rem; border-radius: 6px; }
 .render-card { position: relative; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.render-img { width: 100%; height: auto; display: block; aspect-ratio: 1/1; object-fit: cover; cursor: pointer; }
+.render-img { width: 100%; height: auto; display: block; aspect-ratio: 16 / 9; object-fit: cover; cursor: pointer; }
 .render-img.dark { filter: brightness(0.6) contrast(1.2); }
 .meta { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; }
 .actions { display: flex; gap: 0.5rem; }
@@ -31,7 +31,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .modify-section details { margin-top: 0.5rem; }
 .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
-.modal-content { margin: auto; display: block; max-width: 90%; max-height: 90%; }
+.modal-content { margin: auto; display: block; max-width: 90%; max-height: 90vh; }
 .close-modal { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
 .slideshow-container, .slide { text-align: center; }
 .slide img { max-width: 100%; max-height: 70vh; border-radius: 8px; }
@@ -40,4 +40,4 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .flash.danger { background-color: #fed7d7; color: #822727; }
 #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; color: white; text-align: center; justify-content: center; align-items: center; flex-direction: column; }
 .loading-content { background: #333; padding: 2rem; border-radius: 8px; }
-@media (max-width: 768px) { .landing-grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) { .landing-grid { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }
