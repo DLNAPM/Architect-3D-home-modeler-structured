@@ -212,7 +212,13 @@ def generate():
         # Step 2: Generate Back Exterior using Front as Reference
         front_image_full_path = STATIC_DIR / front_rel_path
         # --- FIX --- Use the renamed GoogleAIImage class
-        reference_image = GoogleAIImage.load_from_file(str(front_image_full_path))
+        # This correctly loads the raw image data into the right object
+        base_image = GoogleAIImage.load_from_file(str(front_image_full_path))
+        # ... then in the function call
+        response = model.edit_image(
+            prompt=back_prompt,
+            base_image=base_image, # Pass the correctly loaded image
+        )
         
         back_prompt = build_prompt("Back Exterior", {}, description, reference_image=reference_image)
         back_rel_path = generate_image_via_google_ai(back_prompt, reference_image=reference_image)
