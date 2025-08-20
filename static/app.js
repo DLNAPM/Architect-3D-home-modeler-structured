@@ -78,8 +78,28 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.body.addEventListener('submit', handleFormSubmit);
         document.body.addEventListener('click', handleCardClick);
+
+        // --- FIX --- Restore event listener for the main delete button
+        const deleteBtn = document.getElementById('deleteBtn');
+        if(deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                const selectedIds = getSelectedIds();
+                if (selectedIds.length === 0) {
+                    alert('Please select one or more renderings to delete.');
+                    return;
+                }
+                if (confirm(`Are you sure you want to delete ${selectedIds.length} rendering(s)?`)) {
+                    handleBulkAction('delete', selectedIds, true);
+                }
+            });
+        }
     }
 });
+
+function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.rendering-checkbox:checked'))
+                .map(cb => cb.closest('.render-card').dataset.id);
+}
 
 function handleFormSubmit(e) {
     if (e.target.classList.contains('modify-form')) {
@@ -102,6 +122,24 @@ function handleCardClick(e) {
         handleBulkAction(action, [card.dataset.id]).then(() => e.target.classList.toggle('active'));
     } else if (e.target.classList.contains('dark-toggle')) {
         card.querySelector('.render-img').classList.toggle('dark');
+    }
+}
+
+async function handleBulkAction(action, ids, reloadPage = false) {
+    const body = new FormData();
+    body.append('action', action);
+    body.append('ids', JSON.stringify(ids));
+
+    try {
+        const response = await fetch('/bulk_action', { method: 'POST', body: body });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        showFlash(result.message, 'success');
+        if (reloadPage) {
+            setTimeout(() => window.location.reload(), 1500);
+        }
+    } catch (error) {
+        showFlash(error.message, 'danger');
     }
 }
 
