@@ -1,16 +1,3 @@
-if base_image:
-    response = model.edit_image(
-        prompt=prompt,
-        base_image=base_image # <--- Corrected: aspect_ratio is removed
-    )```
-
----
-
-### **Replace Your `app.py`**
-
-Please replace the entire content of your `app.py` file one last time with this **complete, verified, and fully functional** version.
-
-```python
 #!/usr/bin/env python3
 """
 Architect 3D Home Modeler – Powered by Google AI (Final Fix)
