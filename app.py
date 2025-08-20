@@ -321,7 +321,7 @@ def generate_image_via_google_ai(prompt: str) -> str:
 
     vertexai.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
     
-    model = ImageGenerationModel.from_pretrained("image-generation@005") # Using a specific stable version
+    model = ImageGenerationModel.from_pretrained("imagegeneration@006") # Using a specific stable version
     
     response = model.generate_images(
         prompt=prompt,
