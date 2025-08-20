@@ -308,7 +308,7 @@ def build_prompt(subcategory: str, options_map: dict, description: str, plan_upl
 
 def save_image_bytes(png_bytes: bytes) -> str:
     uid = uuid.uuid4().hex
-    filepath = RENDER_DIR / f"{uid}.png
+    filepath = RENDER_DIR / f"{uid}.png" # <--- Corrected closing parenthesis
     with open(filepath, "wb") as f: f.write(png_bytes)
     return f"renderings/{filepath.name}"
 
