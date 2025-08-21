@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Architect 3D Home Modeler – Powered by Google AI (Subject-First Prompting)
-- FIXED: Radically re-engineered prompts to prioritize the subject (room type) over style.
-- This prevents the AI from confusing room types (e.g., rendering a living room for a bedroom).
-- Retains all previous quality, consistency, and session management features.
+Architect 3D Home Modeler – Powered by Google AI (Art Direction Update)
+- Implemented advanced prompt engineering for mood, style, and art direction.
+- Added strong negative prompts to combat "scary" or "wicked" aesthetics.
+- Prompts now encourage human presence for more life-like scenes.
 """
 
 import os
@@ -138,39 +138,32 @@ def build_room_list(description: str):
         rooms.extend(BASEMENT_ROOMS)
     return rooms
 
-def build_prompt(subcategory: str, style_prompt: str, options_map: dict = None, environment_context: str = None):
-    # --- PROMPT RE-ENGINEERING ---
-    # 1. Define the Subject FIRST.
-    subject = f"An ultra-realistic, professional architectural photograph of a residential {subcategory}."
-
-    # 2. Define the Quality & Style
-    quality_and_style = f"{style_prompt} The space must be depicted in pristine, brand-new construction condition. All surfaces must be immaculately clean. All architectural lines must be straight and true. The lighting is soft and cinematic. The composition must be balanced and follow the rule of thirds."
-
-    # 3. Define the Context & Rules
+def build_prompt(subcategory: str, master_prompt: str, options_map: dict = None, environment_context: str = None):
+    subject = f"A vibrant, inviting, and warm architectural photograph of a residential {subcategory}."
+    quality_and_style = f"{master_prompt} The mood is peaceful and aspirational. The space must be depicted in pristine, brand-new construction condition. All surfaces must be immaculately clean. All architectural lines must be straight and true. The lighting is beautiful golden hour light, creating long, gentle shadows. The composition must be balanced and aesthetically pleasing."
+    
     view_context = ""
-    negative_prompt_parts = ["cartoon", "illustration", "3d render", "unrealistic", "blurry", "distorted", "watermark", "text", "out of focus", "melting", "warping", "artifacts", "malformed", "dingy", "dirty", "grimy", "smudged", "unfinished", "messy", "dilapidated"]
+    negative_prompt_parts = ["cartoon", "illustration", "3d render", "unrealistic", "blurry", "distorted", "watermark", "text", "out of focus", "melting", "warping", "artifacts", "malformed", "dingy", "dirty", "grimy", "smudged", "unfinished", "messy", "dilapidated", "scary", "wicked", "gloomy", "dark", "eerie", "abandoned", "horror"]
 
     if subcategory == "Front Exterior":
-        view_context = "The camera angle MUST be from the street, looking towards the house. The composition MUST include the driveway, garage, and the main entrance. The scene MUST contain exactly what the user has described."
+        view_context = "Create the front exterior of this house. A person can be seen relaxing in the scene to give a sense of scale and life. The camera angle MUST be from the street, looking towards the house. The composition MUST include the driveway, garage, and the main entrance. The scene MUST contain exactly what the user has described."
         negative_prompt_parts.extend(["pool", "swimming pool", "backyard", "patio furniture", "grill", "aerial view", "top-down view", "drone shot"])
     elif subcategory == "Back Exterior":
-        view_context = "This is the back exterior of the exact same house. The camera angle MUST be from the backyard, focusing on outdoor living areas like a patio or lawn."
+        view_context = "Now, create the back exterior of the exact same house. A person can be seen relaxing in the scene to give a sense of scale and life. The camera angle MUST be from the backyard, focusing on outdoor living areas like a patio or lawn."
         negative_prompt_parts.extend(["driveway", "street", "garage"])
     elif subcategory == "Half Bath":
-        view_context = "This is an interior view of a Half Bath (Powder Room), which is a small room containing ONLY a toilet and a sink. CRITICAL EXCLUSION: The room MUST NOT contain a shower or a bathtub."
+        view_context = "Now, create an interior view of the Half Bath (Powder Room). A Half Bath is a small room containing ONLY a toilet and a sink. CRITICAL EXCLUSION: The room MUST NOT contain a shower or a bathtub."
         negative_prompt_parts.extend(["shower", "bathtub"])
-    else: # All other interior rooms
-        view_context = f"This is an interior view of the {subcategory}."
+    else:
+        view_context = f"Now, create an interior view of the {subcategory}."
         if environment_context:
             view_context += f" The view through any windows MUST look out onto the established environment: {environment_context}."
     
-    # 4. Define the specific user-selected details
     selections = ""
     if options_map:
         selections = ", ".join([f"{k} is {v}" for k, v in options_map.items() if v and v not in ["None", ""]])
         selections = f" Specific features to include: {selections}."
 
-    # 5. Assemble the final prompt in the correct order
     full_prompt = f"{subject} {quality_and_style} {view_context}{selections}"
     negative_prompt = ", ".join(negative_prompt_parts)
     
@@ -210,17 +203,17 @@ def generate():
     conn = get_db()
     cur = conn.cursor()
     
-    style_prompt = f"The architectural style and scene is: {description or 'a tasteful contemporary design'}."
+    master_prompt_base = f"The architectural style and scene is: {description or 'a tasteful contemporary design'}."
     
     try:
-        front_prompt, negative_prompt_front = build_prompt("Front Exterior", style_prompt)
+        front_prompt, negative_prompt_front = build_prompt("Front Exterior", master_prompt_base)
         front_rel_path = generate_image_via_google_ai(front_prompt, negative_prompt_front)
         now = datetime.utcnow().isoformat()
         cur.execute("INSERT INTO renderings (user_id, category, subcategory, options_json, prompt, image_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",(user_id, "EXTERIOR", "Front Exterior", json.dumps({}), front_prompt, front_rel_path, now))
         conn.commit()
         new_rendering_ids.append(cur.lastrowid)
 
-        back_prompt, negative_prompt_back = build_prompt("Back Exterior", style_prompt)
+        back_prompt, negative_prompt_back = build_prompt("Back Exterior", master_prompt_base)
         back_rel_path = generate_image_via_google_ai(back_prompt, negative_prompt_back)
         now = datetime.utcnow().isoformat()
         cur.execute("INSERT INTO renderings (user_id, category, subcategory, options_json, prompt, image_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",(user_id, "EXTERIOR", "Back Exterior", json.dumps({}), back_prompt, back_rel_path, now))
@@ -248,9 +241,9 @@ def generate_room():
     selected = {opt_name: request.form.get(opt_name) for opt_name in OPTIONS.get(subcategory, {}).keys()}
     
     environment_context = session.get('environment_context', 'a standard suburban neighborhood')
-    style_prompt = f"The interior design style is: {description or 'a tasteful contemporary design'}."
+    master_prompt = f"The interior design style is: {description or 'a tasteful contemporary design'}."
     
-    prompt, negative_prompt = build_prompt(subcategory, style_prompt, selected, environment_context)
+    prompt, negative_prompt = build_prompt(subcategory, master_prompt, selected, environment_context)
     
     try:
         rel_path = generate_image_via_google_ai(prompt, negative_prompt)
