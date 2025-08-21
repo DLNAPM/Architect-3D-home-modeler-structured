@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Architect 3D Home Modeler – Powered by Google AI (Art Direction Upgrade)
-- Implemented advanced prompt engineering for mood, style, and art direction.
-- Added strong negative prompts to combat "scary" or "wicked" aesthetics.
-- Prompts now encourage human presence for more life-like scenes.
+Architect 3D Home Modeler – Powered by Google AI (Art Direction Update v2)
+- Implemented advanced prompt engineering for complex scenes and art direction.
+- Prompts now use a "Subject-Quality-Context" hierarchy to prevent AI misinterpretation.
+- Added stronger negative prompts to combat "scary" or "wicked" aesthetics.
 """
 
 import os
