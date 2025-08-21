@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Architect 3D Home Modeler – Powered by Google AI (Consistency & Bug Fix)
-- FIXED: Replaced the entire flawed image-editing logic with a "Master Prompt" strategy.
-- This new method ensures Front and Back exterior consistency without causing 400 errors.
+Architect 3D Home Modeler – Powered by Google AI (Advanced Photorealism)
+- Implemented advanced prompt engineering for hyper-realism.
+- Prompts now command specific lighting, textures, and composition.
+- Added a stronger negative prompt to fight artificiality.
 """
 
 import os
@@ -137,7 +138,7 @@ def build_room_list(description: str):
         rooms.extend(BASEMENT_ROOMS)
     return rooms
 
-def build_prompt(subcategory: str, master_prompt: str):
+def build_prompt(subcategory: str, master_prompt: str, options_map: dict = None):
     view_context = ""
     if subcategory == "Front Exterior":
         view_context = "Create the front exterior of this house. The camera angle MUST be from the street, looking towards the house. The composition MUST include the driveway, garage, and the main entrance."
@@ -145,7 +146,13 @@ def build_prompt(subcategory: str, master_prompt: str):
         view_context = "Now, create the back exterior of the exact same house described in the prompt. The camera angle MUST be from the backyard, focusing on outdoor living areas like a patio or lawn."
     else:
         view_context = f"Now, create an interior view of the {subcategory} of the exact same house."
-    return f"{master_prompt} {view_context}"
+    
+    selections = ""
+    if options_map:
+        selections = ", ".join([f"{k} is {v}" for k, v in options_map.items() if v and v not in ["None", ""]])
+        selections = f" Specific features to include: {selections}."
+
+    return f"{master_prompt} {view_context}{selections}"
 
 def save_image_bytes(png_bytes: bytes) -> str:
     uid = uuid.uuid4().hex
@@ -153,12 +160,17 @@ def save_image_bytes(png_bytes: bytes) -> str:
     with open(filepath, "wb") as f: f.write(png_bytes)
     return f"renderings/{filepath.name}"
 
-def generate_image_via_google_ai(prompt: str) -> str:
+def generate_image_via_google_ai(prompt: str, negative_prompt: str) -> str:
     if not GCP_PROJECT_ID:
         raise RuntimeError("GCP_PROJECT_ID environment variable not set.")
     vertexai.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
     model = ImageGenerationModel.from_pretrained("imagegeneration@006")
-    response = model.generate_images(prompt=prompt, number_of_images=1, aspect_ratio="16:9")
+    response = model.generate_images(
+        prompt=prompt,
+        number_of_images=1,
+        aspect_ratio="16:9",
+        negative_prompt=negative_prompt
+    )
     if not response:
         raise RuntimeError("Google AI did not return any images.")
     image_bytes = response[0]._image_bytes
@@ -179,13 +191,13 @@ def generate():
     conn = get_db()
     cur = conn.cursor()
     
-    # --- FIX --- Create the "Master Prompt" first
-    master_prompt_base = "An ultra-realistic, professional architectural photograph of a residential home. The architectural style is: " + (description or 'a tasteful contemporary design') + "."
+    master_prompt_base = f"An ultra-realistic, professional architectural photograph of a residential home. The lighting must be soft, cinematic, early morning light, creating long, gentle shadows and highlighting the textures of the materials. The composition must follow the rule of thirds and be visually balanced. The architectural style is: {description or 'a tasteful contemporary design'}."
     
     try:
         # Step 1: Generate Front Exterior
         front_prompt = build_prompt("Front Exterior", master_prompt_base)
-        front_rel_path = generate_image_via_google_ai(front_prompt)
+        negative_prompt_front = "cartoon, illustration, 3d render, unrealistic, blurry, distorted, watermark, text, out of focus, pool, backyard, patio furniture"
+        front_rel_path = generate_image_via_google_ai(front_prompt, negative_prompt_front)
         now = datetime.utcnow().isoformat()
         cur.execute("INSERT INTO renderings (user_id, category, subcategory, options_json, prompt, image_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",(user_id, "EXTERIOR", "Front Exterior", json.dumps({}), front_prompt, front_rel_path, now))
         conn.commit()
@@ -193,7 +205,8 @@ def generate():
 
         # Step 2: Generate Back Exterior using the same Master Prompt
         back_prompt = build_prompt("Back Exterior", master_prompt_base)
-        back_rel_path = generate_image_via_google_ai(back_prompt)
+        negative_prompt_back = "cartoon, illustration, 3d render, unrealistic, blurry, distorted, watermark, text, out of focus, driveway, street, garage"
+        back_rel_path = generate_image_via_google_ai(back_prompt, negative_prompt_back)
         now = datetime.utcnow().isoformat()
         cur.execute("INSERT INTO renderings (user_id, category, subcategory, options_json, prompt, image_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",(user_id, "EXTERIOR", "Back Exterior", json.dumps({}), back_prompt, back_rel_path, now))
         conn.commit()
@@ -213,17 +226,18 @@ def generate():
     flash("Generated consistent Front & Back exterior renderings!", "success")
     return redirect(url_for("gallery" if user_id else "session_gallery"))
 
-# ... (All other routes and functions remain the same as the previous correct, complete version)
+# ... (The rest of the routes and functions are complete and correct as in the previous version)
 
 @app.post("/generate_room")
 def generate_room():
     subcategory = request.form.get("subcategory")
     description = request.form.get("description", "")
     selected = {opt_name: request.form.get(opt_name) for opt_name in OPTIONS.get(subcategory, {}).keys()}
-    # Note: Rooms don't need the master prompt in the same way, but this could be enhanced later
-    prompt = build_prompt(subcategory, description) 
+    master_prompt = f"An ultra-realistic, professional architectural photograph of a residential home's interior. The lighting must be soft and natural. The style is: {description or 'a tasteful contemporary design'}."
+    prompt = build_prompt(subcategory, master_prompt, selected)
+    negative_prompt = "cartoon, illustration, 3d render, unrealistic, blurry, distorted, watermark, text, out of focus"
     try:
-        rel_path = generate_image_via_google_ai(prompt)
+        rel_path = generate_image_via_google_ai(prompt, negative_prompt)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     user_id = session.get("user_id")
@@ -353,9 +367,13 @@ def modify_rendering(rid):
     subcategory = row["subcategory"]
     original_options = json.loads(row["options_json"] or "{}")
     selected = {opt: request.form.get(opt) or original_options.get(opt) for opt in OPTIONS.get(subcategory, {}).keys()}
-    prompt = build_prompt(subcategory, selected, description)
+    
+    master_prompt = f"An ultra-realistic, professional architectural photograph of a residential home. The style is: {description or 'a tasteful contemporary design'}."
+    prompt = build_prompt(subcategory, master_prompt, selected)
+    negative_prompt = "cartoon, illustration, 3d render, unrealistic, blurry, distorted, watermark, text, out of focus"
+
     try:
-        rel_path = generate_image_via_google_ai(prompt)
+        rel_path = generate_image_via_google_ai(prompt, negative_prompt)
     except Exception as e:
         conn.close(); return jsonify({"error": f"Modification failed: {e}"}), 500
     now = datetime.utcnow().isoformat()
@@ -424,4 +442,4 @@ def logout():
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)```
