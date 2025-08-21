@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Architect 3D Home Modeler – Powered by Google AI (Final Fix)
-- FIXED: Removed invalid 'aspect_ratio' argument from the edit_image call.
-- This resolves the 400 error and ensures Front/Back consistency is functional.
+Architect 3D Home Modeler – Powered by Google AI (Image Editing Fixed)
+- FIXED: Resolved 400 error by correctly loading the base image using the SDK's method.
+- This version ensures Front/Back exterior consistency is fully functional.
 """
 
 import os
@@ -163,16 +163,9 @@ def generate_image_via_google_ai(prompt: str, base_image: GoogleAIImage = None) 
     vertexai.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
     model = ImageGenerationModel.from_pretrained("imagegeneration@006")
     if base_image:
-        response = model.edit_image(
-            prompt=prompt,
-            base_image=base_image
-        )
+        response = model.edit_image(prompt=prompt, base_image=base_image)
     else:
-        response = model.generate_images(
-            prompt=prompt,
-            number_of_images=1,
-            aspect_ratio="16:9"
-        )
+        response = model.generate_images(prompt=prompt, number_of_images=1, aspect_ratio="16:9")
     if not response:
         raise RuntimeError("Google AI did not return any images.")
     image_bytes = response[0]._image_bytes
@@ -202,9 +195,7 @@ def generate():
         new_rendering_ids.append(front_id)
 
         front_image_full_path = STATIC_DIR / front_rel_path
-        with open(front_image_full_path, "rb") as f:
-            image_bytes = f.read()
-        base_image = GoogleAIImage(image_bytes)
+        base_image = GoogleAIImage.load_from_file(str(front_image_full_path))
         
         back_prompt = build_prompt("Back Exterior", {}, description)
         back_rel_path = generate_image_via_google_ai(back_prompt, base_image=base_image)
