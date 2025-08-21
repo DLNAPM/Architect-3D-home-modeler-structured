@@ -6,7 +6,10 @@
   <p>These are the renderings you've created in this session. They are temporary.</p>
   <p><strong><a href="{{ url_for('register') }}">Create an account</a> or <a href="{{ url_for('login') }}">log in</a> to save your work.</strong></p>
   {% if items %}
-  <p><a href="{{ url_for('clear_session') }}" class="button-danger">Clear All Session Renderings</a></p>
+  <div class="session-actions">
+    <a href="{{ url_for('clear_session') }}" class="button-danger">Clear All Session Renderings</a>
+    <a href="{{ url_for('index') }}" class="button">Start New Session</a>
+  </div>
   {% endif %}
 </div>
 
