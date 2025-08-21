@@ -1,13 +1,18 @@
 {% macro render_card(r, options, user) %}
 <div class="render-card" data-id="{{ r['id'] }}">
-    {% if user %}<input type="checkbox" name="rendering_id" class="rendering-checkbox">{% endif %}
+    {% if user %}
+        <input type="checkbox" name="rendering_id" class="rendering-checkbox">
+    {% endif %}
     <img src="{{ url_for('static', filename=r['image_path']) }}" alt="{{ r['subcategory'] }}" class="render-img modal-trigger">
     <div class="meta">
         <span class="tag">{{ r['subcategory'] }}</span>
         <div class="actions">
-            <button class="action-btn like-btn {% if r['liked'] %}active{% endif %}" title="Like">❤️</button>
-            <button class="action-btn fav-btn {% if r['favorited'] %}active{% endif %}" title="Favorite">⭐</button>
+            <button class="action-btn like-btn" title="Like">❤️</button>
+            <button class="action-btn fav-btn" title="Favorite">⭐</button>
             <button class="action-btn dark-toggle" title="Toggle Dark Mode">🌙</button>
+            {% if not user %}
+            <button class="action-btn delete-session-btn" title="Delete Rendering">🗑️</button>
+            {% endif %}
         </div>
     </div>
     <div class="modify-section">
