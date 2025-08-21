@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Architect 3D Home Modeler – Powered by Google AI (Logic & Quality Update)
-- Implemented contextual definitions in prompts (e.g., a "Half Bath" cannot have a shower).
-- Added commands for cleanliness and "new construction" quality to fight "dingy" look.
-- Enhanced negative prompts to prevent logical and aesthetic errors.
+Architect 3D Home Modeler – Powered by Google AI (Quality & Realism v3)
+- Implemented aggressive prompt engineering to combat "melting" and "dingy" artifacts.
+- Added a powerful negative_prompt to all AI generation calls.
+- Enforced rules for cleanliness, structural integrity, and photographic quality.
 """
 
 import os
@@ -140,10 +140,10 @@ def build_room_list(description: str):
 
 def build_prompt(subcategory: str, master_prompt: str, options_map: dict = None, environment_context: str = None):
     view_context = ""
-    negative_prompt_parts = ["cartoon", "illustration", "3d render", "unrealistic", "blurry", "distorted", "watermark", "text", "out of focus", "melting", "warping", "artifacts", "malformed", "dingy", "dirty", "grimy", "smudged", "unfinished"]
+    negative_prompt_parts = ["cartoon", "illustration", "3d render", "unrealistic", "blurry", "distorted", "watermark", "text", "out of focus", "melting", "warping", "artifacts", "malformed", "dingy", "dirty", "grimy", "smudged", "unfinished", "messy", "dilapidated"]
 
     if subcategory == "Front Exterior":
-        view_context = "Create the front exterior of this house. The camera angle MUST be from the street, looking towards the house. The composition MUST include the driveway, garage, and the main entrance."
+        view_context = "Create the front exterior of this house. The camera angle MUST be from the street, looking towards the house. The composition MUST include the driveway, garage, and the main entrance. The scene MUST contain exactly what the user has described."
         negative_prompt_parts.extend(["pool", "swimming pool", "backyard", "patio furniture", "grill", "aerial view", "top-down view", "drone shot"])
     elif subcategory == "Back Exterior":
         view_context = "Now, create the back exterior of the exact same house described in the prompt. The camera angle MUST be from the backyard, focusing on outdoor living areas like a patio or lawn."
@@ -151,7 +151,7 @@ def build_prompt(subcategory: str, master_prompt: str, options_map: dict = None,
     elif subcategory == "Half Bath":
         view_context = "Now, create an interior view of the Half Bath (Powder Room) of the exact same house. A Half Bath is a small room containing ONLY a toilet and a sink. CRITICAL EXCLUSION: The room MUST NOT contain a shower or a bathtub."
         negative_prompt_parts.extend(["shower", "bathtub"])
-    else: # All other interior rooms
+    else:
         view_context = f"Now, create an interior view of the {subcategory} of the exact same house."
         if environment_context:
             view_context += f" The view through any windows MUST look out onto the established environment: {environment_context}."
@@ -193,17 +193,16 @@ def index():
 def generate():
     description = request.form.get("description", "").strip()
     session['available_rooms'] = build_room_list(description)
-    session['environment_context'] = description # Store the whole description as the environment
+    session['environment_context'] = description
     
     user_id = session.get("user_id")
     new_rendering_ids = []
     conn = get_db()
     cur = conn.cursor()
     
-    master_prompt_base = f"An ultra-realistic, professional architectural photograph of a residential home in pristine, brand-new construction condition. All surfaces must be immaculately clean. The lighting must be soft, cinematic, early morning light, creating long, gentle shadows. The composition must follow the rule of thirds. The architectural style and scene is: {description or 'a tasteful contemporary design'}."
+    master_prompt_base = f"An ultra-realistic, professional architectural photograph of a residential home in pristine, brand-new construction condition. All surfaces must be immaculately clean. The lighting must be soft, cinematic, early morning light, creating long, gentle shadows. The composition must follow the rule of thirds. All architectural lines must be straight and true. The architectural style and scene is: {description or 'a tasteful contemporary design'}."
     
     try:
-        # Step 1: Generate Front Exterior
         front_prompt, negative_prompt_front = build_prompt("Front Exterior", master_prompt_base)
         front_rel_path = generate_image_via_google_ai(front_prompt, negative_prompt_front)
         now = datetime.utcnow().isoformat()
@@ -211,7 +210,6 @@ def generate():
         conn.commit()
         new_rendering_ids.append(cur.lastrowid)
 
-        # Step 2: Generate Back Exterior
         back_prompt, negative_prompt_back = build_prompt("Back Exterior", master_prompt_base)
         back_rel_path = generate_image_via_google_ai(back_prompt, negative_prompt_back)
         now = datetime.utcnow().isoformat()
@@ -262,8 +260,6 @@ def generate_room():
         guest_ids.append(new_id)
         session['guest_rendering_ids'] = guest_ids
     return jsonify({"id": new_id, "path": url_for('static', filename=rel_path), "subcategory": subcategory, "message": f"Generated {subcategory} rendering!"})
-
-# ... (All other routes like gallery, session_gallery, auth, etc., are complete and correct as in the previous version)
 
 @app.get("/gallery")
 def gallery():
