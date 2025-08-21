@@ -79,7 +79,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.addEventListener('submit', handleFormSubmit);
         document.body.addEventListener('click', handleCardClick);
 
-        // --- FIX --- Restore event listener for the main delete button
         const deleteBtn = document.getElementById('deleteBtn');
         if(deleteBtn) {
             deleteBtn.addEventListener('click', () => {
@@ -91,6 +90,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (confirm(`Are you sure you want to delete ${selectedIds.length} rendering(s)?`)) {
                     handleBulkAction('delete', selectedIds, true);
                 }
+            });
+        }
+
+        const selectAll = document.getElementById('selectAll');
+        if(selectAll) {
+            selectAll.addEventListener('change', (e) => {
+                document.querySelectorAll('.rendering-checkbox').forEach(cb => {
+                    cb.checked = e.target.checked;
+                });
             });
         }
     }
@@ -122,6 +130,22 @@ function handleCardClick(e) {
         handleBulkAction(action, [card.dataset.id]).then(() => e.target.classList.toggle('active'));
     } else if (e.target.classList.contains('dark-toggle')) {
         card.querySelector('.render-img').classList.toggle('dark');
+    } else if (e.target.classList.contains('delete-session-btn')) {
+        if (confirm('Are you sure you want to remove this rendering from your session?')) {
+            deleteSessionRendering(card.dataset.id);
+        }
+    }
+}
+
+async function deleteSessionRendering(id) {
+    try {
+        const response = await fetch(`/delete_session_rendering/${id}`, { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        showFlash(result.message, 'success');
+        document.querySelector(`.render-card[data-id='${id}']`).remove();
+    } catch (error) {
+        showFlash(error.message, 'danger');
     }
 }
 
