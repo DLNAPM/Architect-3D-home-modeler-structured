@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Architect 3D Home Modeler – Powered by Google AI (Complete & Verified)
-- FIXED: Restored the missing /session_gallery route and all other functions.
-- This version is complete and contains the full, working implementation.
+- FIXED: Restored the missing /session_gallery route, resolving the BuildError.
+- This version is complete and contains all necessary functions and logic.
 """
 
 import os
@@ -270,19 +270,17 @@ def generate_room():
 @app.get("/gallery")
 def gallery():
     user = current_user()
-    gallery_items = []
-    
-    if user:
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM renderings WHERE user_id = ? ORDER BY created_at DESC", (user["id"],))
-        gallery_items = [dict(row) for row in cur.fetchall()]
-        conn.close()
-    else:
+    if not user:
         return redirect(url_for('session_gallery'))
 
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM renderings WHERE user_id = ? ORDER BY created_at DESC", (user["id"],))
+    all_items = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    
     renderings_by_cat = {}
-    for item in gallery_items:
+    for item in all_items:
         cat = item['subcategory']
         if cat not in renderings_by_cat:
             renderings_by_cat[cat] = []
