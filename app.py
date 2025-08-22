@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Architect 3D Home Modeler – Powered by Google AI (Complete & Verified)
-- FIXED: Resolved JSON parsing error by ensuring all routes correctly handle guest vs. user sessions.
-- This version is complete and contains all necessary functions and logic.
+- This version contains the complete and verified backend code to support the 3-column UI.
+- All routes and functions are fully implemented.
 """
 
 import os
