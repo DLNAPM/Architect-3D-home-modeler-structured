@@ -1,42 +1,67 @@
 {% extends "layout.html" %}
-{% from "macros.html" import render_card %}
 {% block content %}
-<h1>My Renderings</h1>
-{% if new_items %}
-<div class="card">
-  <h2>Newly Generated</h2>
-  <div class="grid">
-    {% for r in new_items %}{{ render_card(r, options, user) }}{% endfor %}
-  </div>
-</div>
-{% endif %}
-<div class="card bulk-actions">
-    <div class="row space">
-        <div>
-            <label><input type="checkbox" id="selectAll"> Select All</label>
-            <button id="likeBtn">❤️ Like</button>
-            <button id="favBtn">⭐ Favorite</button>
-            <button id="deleteBtn" class="button-danger">🗑️ Delete</button>
+<div class="gallery-container">
+    <!-- Left Sidebar -->
+    <div id="left-sidebar" class="sidebar">
+        <div class="project-info">
+            <h2>The Emerald Estate</h2>
+            <p>{{ original_description }}</p>
+            <a href="{{ url_for('index') }}" class="button new-plan-btn">New Plan</a>
+        </div>
+        <nav class="room-nav">
+            <h3 class="nav-heading">EXTERIORS</h3>
+            <a href="#" class="nav-link" data-category="Front Exterior">Front Exterior</a>
+            <a href="#" class="nav-link" data-category="Back Exterior">Back Exterior</a>
+            
+            <h3 class="nav-heading">ROOMS</h3>
+            {% for room in all_rooms %}
+                <a href="#" class="nav-link" data-category="{{ room }}">{{ room }}</a>
+            {% endfor %}
+        </nav>
+    </div>
+
+    <!-- Center Content -->
+    <div id="main-content" class="main-content">
+        <div class="content-header">
+            <h2 id="rendering-title">Renderings for...</h2>
+            <div class="dark-mode-toggle">
+                <span>Dark Mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="darkModeSwitch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        <div id="rendering-grid" class="rendering-grid">
+            <!-- Renderings will be injected here by JavaScript -->
         </div>
     </div>
-    {% if show_slideshow %}<a href="{{ url_for('slideshow') }}" class="button primary">▶️ View Favorites Slideshow</a>{% endif %}
+
+    <!-- Right Options Panel -->
+    <div id="right-options-panel" class="options-panel">
+        <h2 id="options-title"></h2>
+        <p id="options-description"></p>
+        <form id="modifyForm">
+            <label for="describe-changes">Describe Changes</label>
+            <div class="textarea-container">
+                <textarea id="describe-changes" name="description" rows="4"></textarea>
+                <button type="button" id="voiceBtnRight" class="voice-btn">🎤</button>
+            </div>
+            
+            <div class="or-divider">OR</div>
+
+            <div id="options-dropdowns">
+                <!-- Dropdowns will be injected here by JavaScript -->
+            </div>
+            <button type="submit" class="primary">Generate Rendering</button>
+        </form>
+    </div>
 </div>
-<h3>All My Renderings</h3>
-<div id="renderingsGrid" class="grid">
-    {% for r in items %}{{ render_card(r, options, user) }}{% endfor %}
-</div>
-<div class="card">
-    <h2>Generate a New Room</h2>
-    <form id="generateRoomForm">
-        <select id="roomSelect" name="subcategory">
-            {% for room in rooms %}<option value="{{ room }}">{{ room }}</option>{% endfor %}
-        </select>
-        <div id="roomOptionsContainer"></div>
-        <button type="submit" class="primary">Generate Room</button>
-    </form>
-</div>
-<div id="imageModal" class="modal"><span class="close-modal">&times;</span><img class="modal-content" id="modalImg"></div>
+
+<!-- Data for JavaScript -->
 <script>
-    const ROOM_OPTIONS = {{ options | tojson }};
+    const ALL_RENDERINGS = {{ renderings_by_cat | tojson }};
+    const ALL_OPTIONS = {{ options | tojson }};
 </script>
+
 {% endblock %}
