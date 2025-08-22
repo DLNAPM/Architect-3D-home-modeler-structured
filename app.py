@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
 Architect 3D Home Modeler – Powered by Google AI (Plan-Aware & Complete)
-- Implemented advanced prompt injection to force the AI to act as an architect
-  and strictly adhere to uploaded floor plans.
-- This version is complete and contains no placeholder code.
+- RESTORED: The advanced "plan_instructions" prompt logic is now fully integrated.
+- This version ensures the AI acts as a meticulous architect when a floor plan is uploaded.
 """
 
 import os
@@ -140,14 +139,13 @@ def build_room_list(description: str):
 
 def build_prompt(subcategory: str, master_prompt: str, options_map: dict = None, environment_context: str = None, plan_uploaded: bool = False):
     if plan_uploaded:
-        master_prompt = f"""
-        You are an expert architect and a meticulous translator of 2D floor plans into detailed 3D rendering prompts. Your task is to analyze the attached architectural plan and the user's request to create a new, highly specific prompt that is strictly faithful to the plan's measurements, layout, and features.
-        1. **Analyze the Plan:** Carefully examine the specific area mentioned in the original prompt (e.g., "kitchen," "primary bedroom"). Identify key dimensions, proportions, and the spatial relationship of features. If there are measurement annotations, use them. If not, estimate them based on standard architectural conventions (e.g., door widths are 3ft, counter depths are 2ft).
-        2. **Strict Adherence to Schematics:** This is the most important rule. **Do not invent, add, or assume architectural elements that are not explicitly visible in the plan.** If a wall on the plan has no window, your prompt must describe a solid wall. If the plan does not show a fireplace, do not add one. Your output must be a direct visual translation of the provided schematic, not a creative reinterpretation.
-        3. **Rewrite the Prompt:** Integrate your analysis into the original prompt. The new prompt must explicitly state the dimensions and layout. For example, instead of "a large kitchen," write "a kitchen that is 15 feet by 20 feet with a 10-foot ceiling." Mention the size and placement of windows, doors, and key furniture/fixtures **only as they are seen in the plan.** The goal is to create a photorealistic 3D rendering that is dimensionally and structurally accurate to the provided plan.
-        Return only the new, detailed prompt as a single block of text.
-        Original Prompt: "{master_prompt}"
-        """
+        master_prompt = f"""You are an expert architect and a meticulous translator of 2D floor plans into detailed 3D rendering prompts. Your task is to analyze the attached architectural plan and the user's request to create a new, highly specific prompt that is strictly faithful to the plan's measurements, layout, and features.
+1. **Analyze the Plan:** Carefully examine the specific area mentioned in the original prompt (e.g., "kitchen," "primary bedroom"). Identify key dimensions, proportions, and the spatial relationship of features. If there are measurement annotations, use them. If not, estimate them based on standard architectural conventions (e.g., door widths are 3ft, counter depths are 2ft).
+2. **Strict Adherence to Schematics:** This is the most important rule. **Do not invent, add, or assume architectural elements that are not explicitly visible in the plan.** If a wall on the plan has no window, your prompt must describe a solid wall. If the plan does not show a fireplace, do not add one. Your output must be a direct visual translation of the provided schematic, not a creative reinterpretation.
+3. **Rewrite the Prompt:** Integrate your analysis into the original prompt. The new prompt must explicitly state the dimensions and layout. For example, instead of "a large kitchen," write "a kitchen that is 15 feet by 20 feet with a 10-foot ceiling." Mention the size and placement of windows, doors, and key furniture/fixtures **only as they are seen in the plan.** The goal is to create a photorealistic 3D rendering that is dimensionally and structurally accurate to the provided plan.
+Return only the new, detailed prompt as a single block of text.
+Original Prompt: "{master_prompt}"
+"""
 
     subject = f"A vibrant, inviting, and warm architectural photograph of a residential {subcategory}."
     quality_and_style = f"{master_prompt} The mood is peaceful and aspirational. The space must be depicted in pristine, brand-new construction condition. All surfaces must be immaculately clean. All architectural lines must be straight and true. The lighting is beautiful golden hour light, creating long, gentle shadows. The composition must be balanced and aesthetically pleasing."
@@ -215,7 +213,6 @@ def generate():
     base_image = None
     
     if plan_uploaded:
-        # Save the file temporarily to read it
         temp_path = UPLOAD_DIR / f"temp_{uuid.uuid4().hex}"
         plan_file.save(temp_path)
         base_image = GoogleAIImage.load_from_file(str(temp_path))
@@ -232,14 +229,12 @@ def generate():
     
     try:
         front_prompt, negative_prompt_front = build_prompt("Front Exterior", master_prompt_base, plan_uploaded=plan_uploaded)
-        # Pass the plan as the base_image for the front exterior
         front_rel_path = generate_image_via_google_ai(front_prompt, negative_prompt_front, base_image=base_image)
         now = datetime.utcnow().isoformat()
         cur.execute("INSERT INTO renderings (user_id, category, subcategory, options_json, prompt, image_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",(user_id, "EXTERIOR", "Front Exterior", json.dumps({}), front_prompt, front_rel_path, now))
         conn.commit()
         new_rendering_ids.append(cur.lastrowid)
 
-        # For the back, we use the text prompt, not image-to-image
         back_prompt, negative_prompt_back = build_prompt("Back Exterior", master_prompt_base, plan_uploaded=plan_uploaded)
         back_rel_path = generate_image_via_google_ai(back_prompt, negative_prompt_back)
         now = datetime.utcnow().isoformat()
@@ -252,7 +247,6 @@ def generate():
         flash(str(e), "danger")
         return redirect(url_for("index"))
     finally:
-        # Clean up temp file if it exists
         if plan_uploaded and 'temp_path' in locals() and temp_path.exists():
             temp_path.unlink()
 
@@ -428,7 +422,7 @@ def modify_rendering(rid):
     selected = {opt: request.form.get(opt) or original_options.get(opt) for opt in OPTIONS.get(subcategory, {}).keys()}
     
     environment_context = session.get('environment_context', 'a standard suburban neighborhood')
-    master_prompt = f"An ultra-realistic, professional architectural photograph. The style is: {description or 'a tasteful contemporary design'}."
+    master_prompt = f"The architectural style is: {description or 'a tasteful contemporary design'}."
     prompt, negative_prompt = build_prompt(subcategory, master_prompt, selected, environment_context)
     try:
         rel_path = generate_image_via_google_ai(prompt, negative_prompt)
