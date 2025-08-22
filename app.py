@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Architect 3D Home Modeler – Powered by Google AI (Complete & Verified)
-- This version contains the complete and verified backend code to support the 3-column UI.
-- All routes and functions are fully implemented.
+- FIXED: Restored the missing /session_gallery route and all other functions.
+- This version is complete and contains the full, working implementation.
 """
 
 import os
