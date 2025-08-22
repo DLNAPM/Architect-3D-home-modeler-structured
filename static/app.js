@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
     }
 
-    // --- Index Page Logic (Voice & Loading Overlay) ---
+    // --- Index Page Logic (Voice, File Upload & Loading Overlay) ---
     const generateForm = document.getElementById('generateForm');
     if (generateForm) {
         generateForm.addEventListener('submit', function(e) {
@@ -34,7 +34,19 @@ document.addEventListener('DOMContentLoaded', function() {
             recognition.onresult = (event) => { description.value = event.results[0][0].transcript; };
             voiceBtn.addEventListener('click', () => recognition.start());
         } else {
-            voiceBtn.style.display = 'none';
+            if(voiceBtn) voiceBtn.style.display = 'none';
+        }
+        
+        const planFileInput = document.getElementById('planFileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        if(planFileInput && fileNameDisplay) {
+            planFileInput.addEventListener('change', () => {
+                if (planFileInput.files.length > 0) {
+                    fileNameDisplay.textContent = `Plan loaded: ${planFileInput.files[0].name}`;
+                } else {
+                    fileNameDisplay.textContent = '';
+                }
+            });
         }
     }
     
