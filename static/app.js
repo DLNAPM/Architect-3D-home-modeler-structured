@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // --- NEW DYNAMIC GALLERY LOGIC ---
+    // --- DYNAMIC GALLERY LOGIC ---
     const galleryContainer = document.querySelector('.gallery-container');
     if (galleryContainer) {
         const navLinks = document.querySelectorAll('.nav-link');
@@ -82,7 +82,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderings.forEach(r => {
                     const card = document.createElement('div');
                     card.className = 'rendering-card-main';
-                    // The image path needs to be prefixed with '/static/'
                     card.innerHTML = `<img src="/static/${r.image_path}" alt="${r.subcategory}">`;
                     renderingGrid.appendChild(card);
                 });
@@ -91,14 +90,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const options = ALL_OPTIONS[category] || {};
-            for (const [opt, vals] of Object.entries(options)) {
-                const label = document.createElement('label');
-                label.textContent = opt;
-                const select = document.createElement('select');
-                select.name = opt;
-                select.innerHTML = `<option value="">Default</option>` + vals.map(v => `<option value="${v}">${v}</option>`).join('');
-                label.appendChild(select);
-                optionsDropdowns.appendChild(label);
+            if (Object.keys(options).length > 0) {
+                document.querySelector('.or-divider').style.display = 'block';
+                for (const [opt, vals] of Object.entries(options)) {
+                    const label = document.createElement('label');
+                    label.textContent = opt;
+                    const select = document.createElement('select');
+                    select.name = opt;
+                    select.innerHTML = `<option value="">Default</option>` + vals.map(v => `<option value="${v}">${v}</option>`).join('');
+                    label.appendChild(select);
+                    optionsDropdowns.appendChild(label);
+                }
+            } else {
+                 document.querySelector('.or-divider').style.display = 'none';
             }
             
             if (category === "Back Exterior") {
@@ -106,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 optionsDescription.textContent = "";
             }
-            // Apply dark mode if it was already active
+
             document.querySelectorAll('.rendering-card-main img').forEach(img => {
                 img.classList.toggle('dark', darkModeSwitch.checked);
             });
@@ -128,11 +132,10 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('loadingOverlay').style.display = 'flex';
 
             try {
-                // Use generate_room endpoint for all new renderings from this panel
                 const response = await fetch('/generate_room', { method: 'POST', body: formData });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error);
-                window.location.reload(); // Simple reload is easiest to manage state
+                window.location.reload();
             } catch (error) {
                 alert(`Error: ${error.message}`);
                 document.getElementById('loadingOverlay').style.display = 'none';
@@ -147,7 +150,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Voice prompt for the right panel
         const voiceBtnRight = document.getElementById('voiceBtnRight');
         const describeChanges = document.getElementById('describe-changes');
         if (voiceBtnRight && describeChanges) {
@@ -161,7 +163,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Initial load
         if (navLinks.length > 0) {
             updateDisplay('Front Exterior');
         }
