@@ -50,189 +50,123 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // --- Gallery / Session Gallery Page Logic ---
-    const gridContainer = document.getElementById('renderingsGrid');
-    if (gridContainer) {
-        const roomForm = document.getElementById('generateRoomForm');
-        const roomSelect = document.getElementById('roomSelect');
-        const roomOptionsContainer = document.getElementById('roomOptionsContainer');
+    // --- NEW DYNAMIC GALLERY LOGIC ---
+    const galleryContainer = document.querySelector('.gallery-container');
+    if (galleryContainer) {
+        const navLinks = document.querySelectorAll('.nav-link');
+        const renderingTitle = document.getElementById('rendering-title');
+        const renderingGrid = document.getElementById('rendering-grid');
+        const optionsTitle = document.getElementById('options-title');
+        const optionsDescription = document.getElementById('options-description');
+        const optionsDropdowns = document.getElementById('options-dropdowns');
+        const modifyForm = document.getElementById('modifyForm');
+        const activeCategoryInput = document.getElementById('active-category');
+        const describeChangesTextarea = document.getElementById('describe-changes');
+        const darkModeSwitch = document.getElementById('darkModeSwitch');
+
+        function updateDisplay(category) {
+            activeCategoryInput.value = category;
+
+            navLinks.forEach(link => {
+                link.classList.toggle('active', link.dataset.category === category);
+            });
+
+            renderingTitle.textContent = `Renderings for ${category}`;
+            optionsTitle.textContent = category;
+            
+            renderingGrid.innerHTML = '';
+            optionsDropdowns.innerHTML = '';
+            
+            const renderings = ALL_RENDERINGS[category] || [];
+            if (renderings.length > 0) {
+                renderings.forEach(r => {
+                    const card = document.createElement('div');
+                    card.className = 'rendering-card-main';
+                    // The image path needs to be prefixed with '/static/'
+                    card.innerHTML = `<img src="/static/${r.image_path}" alt="${r.subcategory}">`;
+                    renderingGrid.appendChild(card);
+                });
+            } else {
+                renderingGrid.innerHTML = `<p class="no-renderings-msg">No renderings yet for ${category}. Use the panel on the right to generate one!</p>`;
+            }
+
+            const options = ALL_OPTIONS[category] || {};
+            for (const [opt, vals] of Object.entries(options)) {
+                const label = document.createElement('label');
+                label.textContent = opt;
+                const select = document.createElement('select');
+                select.name = opt;
+                select.innerHTML = `<option value="">Default</option>` + vals.map(v => `<option value="${v}">${v}</option>`).join('');
+                label.appendChild(select);
+                optionsDropdowns.appendChild(label);
+            }
+            
+            if (category === "Back Exterior") {
+                optionsDescription.textContent = "The Back Exterior features a brand-new deck, lush greenery, and walk-out access from the finished basement.";
+            } else {
+                optionsDescription.textContent = "";
+            }
+            // Apply dark mode if it was already active
+            document.querySelectorAll('.rendering-card-main img').forEach(img => {
+                img.classList.toggle('dark', darkModeSwitch.checked);
+            });
+        }
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                updateDisplay(link.dataset.category);
+            });
+        });
+
+        modifyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(modifyForm);
+            const button = modifyForm.querySelector('button[type="submit"]');
+            button.textContent = 'Generating...';
+            button.disabled = true;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            try {
+                // Use generate_room endpoint for all new renderings from this panel
+                const response = await fetch('/generate_room', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                window.location.reload(); // Simple reload is easiest to manage state
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+                document.getElementById('loadingOverlay').style.display = 'none';
+                button.textContent = 'Generate Rendering';
+                button.disabled = false;
+            }
+        });
         
-        function updateRoomOptions() {
-            if (!roomSelect) return;
-            const subcategory = roomSelect.value;
-            const options = ROOM_OPTIONS[subcategory];
-            roomOptionsContainer.innerHTML = '';
-            if (options) {
-                const container = document.createElement('div');
-                container.className = 'options-grid';
-                for (const [opt, vals] of Object.entries(options)) {
-                    const label = document.createElement('label');
-                    label.textContent = opt;
-                    const select = document.createElement('select');
-                    select.name = opt;
-                    vals.forEach(v => {
-                        const option = document.createElement('option');
-                        option.value = v;
-                        option.textContent = v;
-                        select.appendChild(option);
-                    });
-                    label.appendChild(select);
-                    container.appendChild(label);
-                }
-                roomOptionsContainer.appendChild(container);
+        darkModeSwitch.addEventListener('change', () => {
+            document.querySelectorAll('.rendering-card-main img').forEach(img => {
+                img.classList.toggle('dark', darkModeSwitch.checked);
+            });
+        });
+
+        // Voice prompt for the right panel
+        const voiceBtnRight = document.getElementById('voiceBtnRight');
+        const describeChanges = document.getElementById('describe-changes');
+        if (voiceBtnRight && describeChanges) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.onresult = (event) => { describeChanges.value = event.results[0][0].transcript; };
+                voiceBtnRight.addEventListener('click', () => recognition.start());
+            } else {
+                voiceBtnRight.style.display = 'none';
             }
         }
         
-        if (roomSelect) {
-            roomSelect.addEventListener('change', updateRoomOptions);
-            updateRoomOptions();
-        }
-        
-        document.body.addEventListener('submit', handleFormSubmit);
-        document.body.addEventListener('click', handleCardClick);
-
-        const deleteBtn = document.getElementById('deleteBtn');
-        if(deleteBtn) {
-            deleteBtn.addEventListener('click', () => {
-                const selectedIds = getSelectedIds();
-                if (selectedIds.length === 0) {
-                    alert('Please select one or more renderings to delete.');
-                    return;
-                }
-                if (confirm(`Are you sure you want to delete ${selectedIds.length} rendering(s)?`)) {
-                    handleBulkAction('delete', selectedIds, true);
-                }
-            });
-        }
-
-        const selectAll = document.getElementById('selectAll');
-        if(selectAll) {
-            selectAll.addEventListener('change', (e) => {
-                document.querySelectorAll('.rendering-checkbox').forEach(cb => {
-                    cb.checked = e.target.checked;
-                });
-            });
+        // Initial load
+        if (navLinks.length > 0) {
+            updateDisplay('Front Exterior');
         }
     }
 });
-
-function getSelectedIds() {
-    return Array.from(document.querySelectorAll('.rendering-checkbox:checked'))
-                .map(cb => cb.closest('.render-card').dataset.id);
-}
-
-function handleFormSubmit(e) {
-    if (e.target.classList.contains('modify-form')) {
-        e.preventDefault();
-        modifyRendering(e.target);
-    }
-    if (e.target.id === 'generateRoomForm') {
-        e.preventDefault();
-        generateNewRoom(e.target);
-    }
-}
-
-function handleCardClick(e) {
-    const card = e.target.closest('.render-card');
-    if (!card) return;
-
-    if (e.target.classList.contains('like-btn') || e.target.classList.contains('fav-btn')) {
-        if (requireLogin('save likes and favorites')) return;
-        const action = e.target.classList.contains('like-btn') ? 'like' : 'favorite';
-        handleBulkAction(action, [card.dataset.id]).then(() => e.target.classList.toggle('active'));
-    } else if (e.target.classList.contains('dark-toggle')) {
-        card.querySelector('.render-img').classList.toggle('dark');
-    } else if (e.target.classList.contains('delete-session-btn')) {
-        if (confirm('Are you sure you want to remove this rendering from your session?')) {
-            deleteSessionRendering(card.dataset.id);
-        }
-    }
-}
-
-async function deleteSessionRendering(id) {
-    try {
-        const response = await fetch(`/delete_session_rendering/${id}`, { method: 'POST' });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-        showFlash(result.message, 'success');
-        document.querySelector(`.render-card[data-id='${id}']`).remove();
-    } catch (error) {
-        showFlash(error.message, 'danger');
-    }
-}
-
-async function handleBulkAction(action, ids, reloadPage = false) {
-    const body = new FormData();
-    body.append('action', action);
-    body.append('ids', JSON.stringify(ids));
-
-    try {
-        const response = await fetch('/bulk_action', { method: 'POST', body: body });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-        showFlash(result.message, 'success');
-        if (reloadPage) {
-            setTimeout(() => window.location.reload(), 1500);
-        }
-    } catch (error) {
-        showFlash(error.message, 'danger');
-    }
-}
-
-async function modifyRendering(form) {
-    const id = form.dataset.id;
-    const formData = new FormData(form);
-    const button = form.querySelector('button');
-    button.textContent = 'Generating...';
-    button.disabled = true;
-    document.getElementById('loadingOverlay').style.display = 'flex';
-
-    try {
-        const response = await fetch(`/modify_rendering/${id}`, { method: 'POST', body: formData });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-        showFlash(result.message, 'success');
-        setTimeout(() => window.location.reload(), 1500);
-    } catch (error) {
-        showFlash(error.message, 'danger');
-        document.getElementById('loadingOverlay').style.display = 'none';
-    } finally {
-        button.textContent = 'Regenerate';
-        button.disabled = false;
-    }
-}
-
-async function generateNewRoom(form) {
-    const formData = new FormData(form);
-    const button = form.querySelector('button');
-    button.textContent = 'Generating...';
-    button.disabled = true;
-    document.getElementById('loadingOverlay').style.display = 'flex';
-
-    try {
-        const response = await fetch('/generate_room', { method: 'POST', body: formData });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-        showFlash(result.message, 'success');
-        setTimeout(() => window.location.reload(), 1500);
-    } catch (error) {
-        showFlash(error.message, 'danger');
-        document.getElementById('loadingOverlay').style.display = 'none';
-    } finally {
-        button.textContent = 'Generate Room';
-        button.disabled = false;
-    }
-}
-
-function requireLogin(action_text = 'save your work') {
-    if (!IS_LOGGED_IN) {
-        if (confirm(`Please log in or register to ${action_text}. Would you like to go to the login page?`)) {
-            window.location.href = '/login?next=' + window.location.pathname;
-        }
-        return true;
-    }
-    return false;
-}
 
 function showFlash(message, category) {
     const container = document.getElementById('flash-container');
